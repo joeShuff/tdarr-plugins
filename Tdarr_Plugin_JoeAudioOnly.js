@@ -84,25 +84,27 @@ const plugin = (file, librarySettings, inputs, otherArguments) => {
 
   var hasStreamsToTranscode = false;
 
-  var ffmpegCommand = `, -c copy  -map 0:v `;
+  //copy all video streams
+  var ffmpegCommand = `, -map 0:v? -c:v copy `;
 
+  //work out if there is a audio stream that needs converting
   for (var i = 0; i < file.ffProbeData.streams.length; i++) {
     if (
       file.ffProbeData.streams[i].codec_type.toLowerCase() == "audio" &&
       file.ffProbeData.streams[i].codec_name &&
       encoder != file.ffProbeData.streams[i].codec_name.toLowerCase()
     ) {
-      ffmpegCommand += `  -map 0:${i} -c:${i} ${encoder} `;
+      //Audio stream needs transcoding
+      ffmpegCommand += `-map 0:a -c:a ${encoder} `;
       if (inputs.bitrate !== '') {
         ffmpegCommand += `-b:a ${inputs.bitrate} `;
       }
       hasStreamsToTranscode = true;
-    } else if (file.ffProbeData.streams[i].codec_type.toLowerCase() == "audio") {
-      ffmpegCommand += `  -map 0:${i}`;
     }
   }
 
-  ffmpegCommand += ` -map 0:s? -map 0:d? -max_muxing_queue_size 9999`;
+  //copy all subtitle and data streams
+  ffmpegCommand += `-map 0:s? -c:s copy -map 0:d? -c:d copy -max_muxing_queue_size 9999`;
 
   if (hasStreamsToTranscode == false) {
     response.processFile = false;
