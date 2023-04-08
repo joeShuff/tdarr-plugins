@@ -94,12 +94,15 @@ const plugin = (file, librarySettings, inputs, otherArguments) => {
       file.ffProbeData.streams[i].codec_name &&
       encoder != file.ffProbeData.streams[i].codec_name.toLowerCase()
     ) {
-      //Audio stream needs transcoding
-      ffmpegCommand += `-map 0:a -c:a ${encoder} `;
-      if (inputs.bitrate !== '') {
-        ffmpegCommand += `-b:a ${inputs.bitrate} `;
-      }
       hasStreamsToTranscode = true;
+    }
+  }
+
+  if (hasStreamsToTranscode) {
+    //Audio stream needs transcoding
+    ffmpegCommand += `-map 0:a -c:a ${encoder} `;
+    if (inputs.bitrate !== '') {
+      ffmpegCommand += `-b:a ${inputs.bitrate} `;
     }
   }
 
