@@ -5,7 +5,7 @@ const details = () => ({
       'Joe Custom h264 8Bit - MKV Container',
   Type: 'Video',
   Operation: 'Transcode',
-  Description: '[Contains built-in filter] This plugin transcodes into 8Bit H264 using FFMpeg '
+  Description: '[Contains built-in filter] This plugin transcodes into 8Bit Level 4.0 H264 using FFMpeg '
     + 'if the file is not in H264 already. It maintains all subtitles '
     + `and maintains all audio tracks. The output container is MKV. \n\n`,
   Version: '1.00',
@@ -23,9 +23,11 @@ const plugin = (file, librarySettings, inputs, otherArguments) => {
 
   let encodeMethod = "libx264"
 
+  // if (otherArguments['workerType'] == "transcodegpu") {
   if (otherArguments['nodeHardwareType'] == "nvenc") {
     encodeMethod = "h264_nvenc"
   }
+  // }
 
   const response = {
     processFile: false,
@@ -36,6 +38,8 @@ const plugin = (file, librarySettings, inputs, otherArguments) => {
     reQueueAfter: false,
     infoLog: '',
   };
+
+  // response.infoLog += "otherArguments = " + JSON.stringify(otherArguments) + "\n"
 
   if (file.fileMedium !== 'video') {
     // eslint-disable-next-line no-console
@@ -49,7 +53,7 @@ const plugin = (file, librarySettings, inputs, otherArguments) => {
 
   if (file.ffProbeData.streams[0].codec_name !== 'h264') {
     response.infoLog += '☒File is not in h264! \n';
-    response.preset = '<io> -map 0:v -map 0:a -map 0:s? -c:v ' + encodeMethod + ' -crf 18 -vf format=yuv420p -c:a copy -c:s copy';
+    response.preset = '<io> -map 0:v -map 0:a -map 0:s? -c:v ' + encodeMethod + ' -crf 18 -vf format=yuv420p -level:v 4.0 -c:a copy -c:s copy';
     response.reQueueAfter = true;
     response.processFile = true;
     response.FFmpegMode = true;
@@ -59,13 +63,24 @@ const plugin = (file, librarySettings, inputs, otherArguments) => {
 
   if (file.ffProbeData.streams[0].profile === 'High 10') {
     response.infoLog += '☒File is not in a suitable profile! (' + file.ffProbeData.streams[0].profile + ') \n';
-    response.preset = '<io> -map 0:v -map 0:a -map 0:s? -c:v ' + encodeMethod + ' -crf 18 -vf format=yuv420p -c:a copy -c:s copy';
+    response.preset = '<io> -map 0:v -map 0:a -map 0:s? -c:v ' + encodeMethod + ' -crf 18 -vf format=yuv420p -level:v 4.0 -c:a copy -c:s copy';
     response.reQueueAfter = true;
     response.processFile = true;
     response.FFmpegMode = true;
     return response;
   }
   response.infoLog += '☑File is already in a suitable Profile! \n';
+
+  let unsupportedLevels = [42]
+  if (unsupportedLevels.includes(file.ffProbeData.streams[0].level)) {
+    response.infoLog += '☒File is not of a suitable level! (' + file.ffProbeData.streams[0].level + ') \n';
+    response.preset = '<io> -map 0:v -map 0:a -map 0:s? -c:v ' + encodeMethod + ' -crf 18 -vf format=yuv420p -level:v 4.0 -c:a copy -c:s copy';
+    response.reQueueAfter = true;
+    response.processFile = true;
+    response.FFmpegMode = true;
+    return response;
+  }
+  response.infoLog += '☑File is already a suitable codec level! \n';
 
   if (file.container !== "mkv") {
     response.infoLog += '☒File is not in mkv container \n';
